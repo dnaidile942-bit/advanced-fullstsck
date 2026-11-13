@@ -1,30 +1,8 @@
-# from fastapi import FastAPI, HTTPException
-# from fastapi.middleware.cors import CORSMiddleware
-# import functions
-
-# app = FastAPI(
-#     title="warehouse API",
-#     description="manage and dispatch the orders",
-# )
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# @app.get("/packages/{package_id}")
-# def get_package(package_id: int):
-#     return functions.get_package(package_id=package_id)
-
-# @app.post("/warehouse/add/{package_id}/{quantity}")
-# def add_to_cart(item_id: int, quantity: int):
-#     return functions.add_to_cart(item_id=item_id, quantity=quantity)
-
-from fastapi import FastAPI
+from fastapi import FastAPI , HTTPException,  Header , Body
 from fastapi.middleware.cors import CORSMiddleware
-
 import functions
+from datetime import date 
+from pydantic import BaseModel
 
 app=FastAPI()
 
@@ -35,11 +13,115 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.post("/package")
-def register_package(name,destination,weight,arrival_date,status):
-    return functions.register_package(name=name,destination=destination,weight=weight,arrival_date=arrival_date,status=status)
-    
-@app.get("/package/{id}")
-def get_package(id):
-    return functions.get_package(id)
+class pakagein (BaseModel):
+    name: str
+    destination: str
+    weight: int
+    arrival_date: date
+    status: str
 
+class pakageupdate(BaseModel):
+    name: str = None
+    destination: str = None
+    weight: int = None
+    arrival_date: date = None
+    status: str = None
+
+class dispatchin(BaseModel):
+    vehicle: str
+    destination: str
+    dstatus: str
+    pakage_id: int
+
+
+# Register a pakage
+@app.post("/pakage")
+def registar_pakage(pakage=pakagein, token=Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return functions.registar_pakage(pakage=pakagein)
+
+# details of a specific pakage   
+@app.get("/pakage/{id}")
+def get_pakages(id , token=Header(None) ):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return functions.get_pakage(id)
+
+# login
+@app.post("/login")
+def login(username= Body(),password=Body()):
+    token = functions.verify_login(username=username, password=password)
+    if not token :
+        raise HTTPException(status_code= 401 , detail="Invalid Credintials")
+    return token
+
+# new access token in refresh name 
+@app.post("/refresh")
+def refresh(refresh_token=Header(None)):
+    username= functions.verify_token(token=refresh_token , token_type="refresh")
+    if not username:
+        raise HTTPException(status_code=401, detail="invalid or expired token")
+    access_token= functions.create_token(username=username, token_type="access")
+    return{"access_token":access_token}
+
+# registar
+@app.post("/registar")
+def registar_user( user_name = Body() , password = Body()):
+    if functions.registar_user(user_name = user_name , password= password):
+        return{"message":"user registar succesfully"}
+    raise HTTPException(status_code=400, detail="user already exist")
+
+# update pakage details
+@app.patch("/pakage/{id}")
+def update_pakage(id , pakage:pakageupdate , token=Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return functions.update_pakage(id,pakageupdate)
+
+# delete pakage 
+@app.delete("/pakage/{id}")
+def delete_pakage(id , token=Header(None)):
+    username =function.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code=401, detail="invalid or expired token")
+    return functions.delete_pakage(id)
+
+# search and filter 
+@app.get("/pakages")
+def search_pakages(id , token=Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException(status_code=401 , detail="invalid or expired token")
+    return functions.search_pakages(id)
+
+# view dispatched pakages
+@app.get("/dispatched")
+def get_dispatched(dispatched=dispatchin, token=Header(None)):
+    username = functions.verify_token(toekn=token)
+    if not username:
+        raise HTTPException(status_code = 401 , detail="invali or expired token")
+    return functions.get_dispatched(dispatched=dispatchin)
+
+# warehouse statistics
+@app.get("/wearhouse/stats")
+def get_statics(token=Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException (status_code=401, detail="invalidor expiredtoken")
+    return functions.get_statics ()
+
+# dispatch details
+@app.post("/dispatch")
+def add_data(dispatch =dispatchin , token=Header(None)):
+    username = functions.verify_token(token=token)
+    if not username:
+        raise HTTPException (status_code=401, detail="invalidor expiredtoken")
+    return functions.add_data (dispatch =dispatchin)
+
+
+
+    
