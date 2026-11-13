@@ -1,5 +1,3 @@
-from os import close
-
 from sqlalchemy import create_engine,Integer,String,Date,Column
 from sqlalchemy.orm import Session,declarative_base
 from fastapi import FastAPI,HTTPException
