@@ -1,8 +1,8 @@
-from fastapi import FastAPI , HTTPException,  Header , Body
+from fastapi import FastAPI,HTTPException,Header,Body
 from fastapi.middleware.cors import CORSMiddleware
-import functions
-from datetime import date 
-from pydantic import BaseModel
+from datetime import date
+from typing import Optional
+import function
 
 app=FastAPI()
 
@@ -13,115 +13,93 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class pakagein (BaseModel):
-    name: str
-    destination: str
-    weight: int
-    arrival_date: date
-    status: str
+@app.post("/register")
+def registar_user(u:function.UserIn):
+    if function.register_user(username=u.username,password=u.password,user_type=u.user_type):
+        return {"messege":"User registered successful"}
+    raise HTTPException(status_code=400,detail="User_Name alreday exists")
 
-class pakageupdate(BaseModel):
-    name: str = None
-    destination: str = None
-    weight: int = None
-    arrival_date: date = None
-    status: str = None
-
-class dispatchin(BaseModel):
-    vehicle: str
-    destination: str
-    dstatus: str
-    pakage_id: int
-
-
-# Register a pakage
-@app.post("/pakage")
-def registar_pakage(pakage=pakagein, token=Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return functions.registar_pakage(pakage=pakagein)
-
-# details of a specific pakage   
-@app.get("/pakage/{id}")
-def get_pakages(id , token=Header(None) ):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return functions.get_pakage(id)
-
-# login
 @app.post("/login")
-def login(username= Body(),password=Body()):
-    token = functions.verify_login(username=username, password=password)
-    if not token :
-        raise HTTPException(status_code= 401 , detail="Invalid Credintials")
+def login(username = Body(),password = Body()):
+    token=function.verify_login(username=username,password=password)
+    if not token:
+        raise HTTPException(status_code=401,detail="Access denied")
     return token
 
-# new access token in refresh name 
 @app.post("/refresh")
 def refresh(refresh_token=Header(None)):
-    username= functions.verify_token(token=refresh_token , token_type="refresh")
-    if not username:
-        raise HTTPException(status_code=401, detail="invalid or expired token")
-    access_token= functions.create_token(username=username, token_type="access")
-    return{"access_token":access_token}
-
-# registar
-@app.post("/registar")
-def registar_user( user_name = Body() , password = Body()):
-    if functions.registar_user(user_name = user_name , password= password):
-        return{"message":"user registar succesfully"}
-    raise HTTPException(status_code=400, detail="user already exist")
-
-# update pakage details
-@app.patch("/pakage/{id}")
-def update_pakage(id , pakage:pakageupdate , token=Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return functions.update_pakage(id,pakageupdate)
-
-# delete pakage 
-@app.delete("/pakage/{id}")
-def delete_pakage(id , token=Header(None)):
-    username =function.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code=401, detail="invalid or expired token")
-    return functions.delete_pakage(id)
-
-# search and filter 
-@app.get("/pakages")
-def search_pakages(id , token=Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException(status_code=401 , detail="invalid or expired token")
-    return functions.search_pakages(id)
-
-# view dispatched pakages
-@app.get("/dispatched")
-def get_dispatched(dispatched=dispatchin, token=Header(None)):
-    username = functions.verify_token(toekn=token)
-    if not username:
-        raise HTTPException(status_code = 401 , detail="invali or expired token")
-    return functions.get_dispatched(dispatched=dispatchin)
-
-# warehouse statistics
-@app.get("/wearhouse/stats")
-def get_statics(token=Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException (status_code=401, detail="invalidor expiredtoken")
-    return functions.get_statics ()
-
-# dispatch details
-@app.post("/dispatch")
-def add_data(dispatch =dispatchin , token=Header(None)):
-    username = functions.verify_token(token=token)
-    if not username:
-        raise HTTPException (status_code=401, detail="invalidor expiredtoken")
-    return functions.add_data (dispatch =dispatchin)
+    payload=function.verify_token(token=refresh_token,token_type="refresh")
+    if not payload:
+        raise HTTPException(status_code=401,detail="Invalid or Expired refresh token")
+    access_token=function.creat_token(username=payload["username"],user_type=payload["user_type"],token_type="access")
+    return {"access_token":access_token}
 
 
 
+@app.post("/registerpackage")
+def register_package(p: function.PackageIn, token=Header(None)):
+    payload = function.verify_token(token=token,token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    return function.register_package(p.name, p.destination, p.weight, p.arrival_date, p.status)
+
+@app.get("/package/{id}")
+def get_package(id:int,token=Header(None)):
+    payload = function.verify_token(token=token,token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    return function.get_package(id)
+
+@app.get("/package")
+def search(destination:Optional[str],status:Optional[str],arrival_date:Optional[date],token=Header(None)):
+    payload = function.verify_token(token=token,token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    return function.search_pack(destination,status,arrival_date)
+
+@app.patch("/package/{id}")
+def update_package(id: int,u: function.PackageUpdate,token=Header(None)):
+    payload = function.verify_token(token=token,token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    return function.update_pack(id=id,name=u.name,destination=u.destination,weight=u.weight,arrival_date=u.arrival_date,status=u.status)
+
+# @app.post("/package")
+# def register_package(name,destination,weight:int,arrival_date,status,token=Header(None)):
+#     username = function.verify_token(token=token,token_type="access")
+#     if not username:
+#         raise HTTPException(status_code=401,detail="Invalid or Expired token")
+#     return function.register_package(name=name,destination=destination,weight=weight,arrival_date=arrival_date,status=status)
     
+
+@app.delete("/package/{id}")
+def delete_package(id:int,token=Header(None)):
+    payload = function.verify_token(token=token,token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    if payload["user_type"] != "manager":
+        raise HTTPException(status_code=403, detail="Not allowed for your role")
+    return function.delete_package(id)
+
+@app.get("/dispatch")
+def get_batch(destination=None,vehicle=None,dstatus=None,token=Header(None)):
+    payload = function.verify_token(token=token,token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401,detail="Invalid or Expired token")
+    return function.get_batch(destination=destination,vehicle=vehicle,dstatus=dstatus)
+
+@app.get("/Package_Stats")
+def get_stats(token=Header(None)):
+    payload = function.verify_token(token=token, token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or Expired token")
+    if payload["user_type"] != "manager":
+        raise HTTPException(status_code=403, detail="Forbiden for your role")
+    return function.get_package_stats()  
+
+@app.post("/dispatch")
+def add_dispatch(d:function.DispatchIn,token=Header(None)):
+    payload= function.verify_token(token=token, token_type="access")
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or Expired token")
+    return function.add_dispatch(d.vehicle,d.destination,d.dstatus,d.package_ids)

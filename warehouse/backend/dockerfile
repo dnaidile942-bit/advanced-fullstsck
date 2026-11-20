@@ -1,0 +1,16 @@
+# declaring python version
+FROM python:3.12-slim  
+#create work directory in docker type
+WORKDIR /app    
+COPY requirements.txt .  
+RUN pip install --no-cache-dir -r requirements.txt 
+ # copy every file from present to created folder
+COPY . .     
+ #only inside this port 
+EXPOSE 8001 
+#run command
+CMD ["uvicorn" , "main:app" , "--host" , "0.0.0.0", "--port" ,  "8001"] 
+
+
+
+
