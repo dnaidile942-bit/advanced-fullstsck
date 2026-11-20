@@ -112,7 +112,7 @@ def create_token(username , token_type, user_id, role):
     if token_type=="refresh":
         time = REFRESH_TOKEN_EXPIRY
     donation = {"user_id":user_id, "role":role, "username": username, "token_type": token_type , "exp": datetime.now(timezone.utc) + timedelta(minutes=time)}
-    token = jwt.encode(donation=donation, key=SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(donation, key=SECRET_KEY, algorithm=ALGORITHM)
     return token
 
 def verify_token(token, token_type="access"):
@@ -216,6 +216,7 @@ def add_donor(roll_no, name, blood_group, weight_kg):
     
     if blood_group not in ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]:
         raise HTTPException(status_code=422, detail="Invalid blood group.")
+    weight_kg = int(weight_kg)
     if weight_kg < 50 or weight_kg > 200:
         raise HTTPException(status_code=422, detail="Weight must between  50kg to 200kg.")
 

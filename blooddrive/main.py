@@ -68,7 +68,7 @@ def get_donor(roll_no, token=Header(None)):
 
 #E3 Add donor
 @app.post("/donors")
-def add_donor(roll_no, name, blood_group, weight_kg, token=Header(None)):
+def add_donor(roll_no, name, blood_group, weight_kg=int, token=Header(None)):
     authorize(token,["admin","staff"])
     return SU_functions.add_donor(roll_no=roll_no, name=name, blood_group=blood_group, weight_kg=weight_kg)
 
